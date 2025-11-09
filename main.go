@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"github.com/gorilla/mux"
 	"net/http"
 	"todolistapi/database"
@@ -16,36 +18,47 @@ func main() {
 	r := mux.NewRouter()
 
 	// Public routes
-	// POST /register: Register a new user.
 	r.HandleFunc("/register", handlers.RegisterUser).Methods("POST")
-	// POST /login: Log in and receive a JWT token.
 	r.HandleFunc("/login", handlers.Login).Methods("POST")
 
-	// protected routes
+	// Protected routes
 	protectedRouter := r.PathPrefix("/todos").Subrouter()
 	protectedRouter.Use(middleware.AuthMiddleware)
 
-	// POST /todos: Create a todo (authenticated).
-	//protectedRouter.HandleFunc("/", handlers.CreateTodos).Methods("POST")
-	protectedRouter.HandleFunc("/create", handlers.CreateTodos)
-	// GET /todos: Get all todos belonging to the logged-in user.
-	//protectedRouter.HandleFunc("/", handlers.GetTodos).Methods("GET")
-	protectedRouter.HandleFunc("/list", handlers.GetTodos)
-	// PUT /todos/:id: Update a specific todo (only if it belongs to the user).
-	//protectedRouter.HandleFunc("/{id}", handlers.UpdateTodo).Methods("PUT")
-	protectedRouter.HandleFunc("/{id}", handlers.UpdateTodo)
-	// DELETE /todos/:id: Delete a specific todo (only if it belongs to the user).
-	//protectedRouter.HandleFunc("id/{id}", handlers.DeleteTodo).Methods("DELETE")
-	protectedRouter.HandleFunc("/delete/{id}", handlers.DeleteTodo)
+	protectedRouter.HandleFunc("/create", handlers.CreateTodos).Methods("POST")
+	protectedRouter.HandleFunc("/list", handlers.GetTodos).Methods("GET")
+	protectedRouter.HandleFunc("/{id}", handlers.UpdateTodo).Methods("PUT")
+	protectedRouter.HandleFunc("/delete/{id}", handlers.DeleteTodo).Methods("DELETE")
 
-	// start the server
-	fmt.Println("Server is running")
-	err := http.ListenAndServe(":8081", r)
+	// Add a simple health check endpoint
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Root endpoint hit!")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "TodoList API is running!")
+	}).Methods("GET")
+
+	// Get port from environment (Render sets this)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081" // Default for local development
+	}
+
+	// Start the server
+	log.Printf("Server starting on port %s...", port)
+	log.Println("Available endpoints:")
+	log.Println("  GET  /")
+	log.Println("  POST /register") 
+	log.Println("  POST /login")
+	log.Println("  POST /todos/create")
+	log.Println("  GET  /todos/list")
+	log.Println("  PUT  /todos/{id}")
+	log.Println("  DELETE /todos/delete/{id}")
+	
+	err := http.ListenAndServe(":"+port, r)
 	if err != nil {
-		panic(err)
+		log.Fatal("Server failed to start: ", err)
 	}
 }
-
 /*
 Requirements:
 Implement user registration and login functionality.✅

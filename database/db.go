@@ -24,3 +24,5 @@ func InitDB() {
 		log.Fatal("error migrating table", err)
 	}
 }
+
+

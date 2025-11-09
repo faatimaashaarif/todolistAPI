@@ -1,10 +1,10 @@
 package database
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"todolistapi/models"
 )
@@ -12,42 +12,19 @@ import (
 var Db *gorm.DB
 
 func InitDB() {
-	var connStr string
-	
-	// Try DATABASE_URL first (for Render)
-	connStr = os.Getenv("DATABASE_URL")
-	if connStr == "" {
-		// Fall back to individual variables (for local development)
-		host := os.Getenv("DB_HOST")
-		user := os.Getenv("DB_USER")
-		password := os.Getenv("DB_PASSWORD")
-		dbname := os.Getenv("DB_NAME")
-		port := os.Getenv("DB_PORT")
-		
-		if host == "" {
-			host = "localhost"
-		}
-		if port == "" {
-			port = "5432"
-		}
-		if user == "" {
-			user = "postgres"
-		}
-		if dbname == "" {
-			dbname = "todolistapi"
-		}
-		
-		connStr = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-			host, user, password, dbname, port)
-	}
-
-	if connStr == "" {
-		log.Fatal("Database connection string is not set")
-	}
-
 	var err error
-	// Open database connection
-	Db, err = gorm.Open(postgres.Open(connStr), &gorm.Config{})
+
+	// Use SQLite for local development, PostgreSQL for production
+	if os.Getenv("DATABASE_URL") != "" {
+		// Production (Render) - use PostgreSQL
+		log.Println("Using PostgreSQL database...")
+		Db, err = gorm.Open(postgres.Open(os.Getenv("DATABASE_URL")), &gorm.Config{})
+	} else {
+		// Local development - use SQLite
+		log.Println("Using SQLite database for local development...")
+		Db, err = gorm.Open(sqlite.Open("local.db"), &gorm.Config{})
+	}
+
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
